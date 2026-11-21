@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mi Olivar · Valdaracete</title>
+<meta name="theme-color" content="#424d1f">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi Olivar">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{
+  --bg:#f6f3ea; --card:#fffdf7; --ink:#2b2a22; --muted:#77735f; --line:#e3ddc9;
+  --olive:#5d6b2f; --olive-d:#424d1f; --olive-l:#e8ecd6; --earth:#9a6b3f; --warn:#b5541c; --warn-l:#fbe9dc;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+h1,h2,h3{font-family:Georgia,"Times New Roman",serif;margin:0}
+header{padding:calc(14px + env(safe-area-inset-top)) 16px 10px;background:linear-gradient(160deg,var(--olive-d),var(--olive));color:#fbf8ec}
+.htop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+header h1{font-size:22px}
+header p{margin:2px 0 0;opacity:.85;font-size:13px}
+.sync{border:0;border-radius:20px;padding:6px 11px;font:600 12px system-ui,sans-serif;cursor:pointer;background:rgba(255,255,255,.18);color:#fff;white-space:nowrap}
+.sync.pend{background:#f3c98b;color:#5a3a10}
+.stats{display:flex;gap:8px;margin-top:12px;overflow-x:auto}
+.stat{background:rgba(255,255,255,.13);border-radius:10px;padding:8px 10px;min-width:92px}
+.stat b{display:block;font-size:18px;font-family:Georgia,serif}
+.stat span{font-size:11px;opacity:.85}
+main{padding:12px;max-width:760px;margin:0 auto}
+#mapwrap{display:none;padding:12px;max-width:960px;margin:0 auto}
+#map{height:62vh;border-radius:14px;border:1px solid var(--line)}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);display:flex;z-index:1000;padding-bottom:env(safe-area-inset-bottom)}
+nav button{flex:1;border:0;background:none;padding:9px 1px 10px;font:500 10.5px system-ui,sans-serif;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+nav button svg{width:22px;height:22px}
+nav button.on{color:var(--olive-d)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:10px}
+.plist .card{cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.pname{font-weight:600}
+.psub{color:var(--muted);font-size:12.5px}
+.badges{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.badge{font-size:11px;padding:2px 7px;border-radius:20px;background:var(--olive-l);color:var(--olive-d);font-weight:500}
+.badge.warn{background:var(--warn-l);color:var(--warn)}
+.badge.earth{background:#f1e5d6;color:var(--earth)}
+.chev{color:var(--muted);font-size:20px}
+.toolbar{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+input,select,textarea{width:100%;font:inherit;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink)}
+textarea{min-height:70px;resize:vertical}
+label{display:block;font-size:12px;color:var(--muted);margin:10px 0 3px;font-weight:500}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:10px;padding:10px 14px;font:600 14px system-ui,sans-serif;background:var(--olive);color:#fff;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn.sec{background:var(--olive-l);color:var(--olive-d)}
+.btn.ghost{background:none;color:var(--olive-d);border:1px solid var(--line)}
+.btn.danger{background:none;color:var(--warn);border:1px solid var(--warn-l)}
+.btn.small{padding:5px 10px;font-size:12.5px}
+.btn[disabled]{opacity:.45;pointer-events:none}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.links{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.back{background:none;border:0;color:var(--olive-d);font:600 14px system-ui,sans-serif;padding:4px 0 10px;cursor:pointer}
+.est{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center;margin-top:6px}
+.est div{background:var(--olive-l);border-radius:10px;padding:8px 4px}
+.est small{display:block;color:var(--muted);font-size:11px}
+.note{font-size:12.5px;color:var(--muted);margin:6px 0 0}
+.alert{background:var(--warn-l);color:var(--warn);border-radius:10px;padding:9px 11px;font-size:13px;margin-bottom:10px}
+.ok{background:var(--olive-l);color:var(--olive-d);border-radius:10px;padding:9px 11px;font-size:13px;margin-bottom:10px}
+.item{border-top:1px solid var(--line);padding:9px 0}
+.item:first-child{border-top:0}
+.item b{font-weight:600}
+.month h3{font-size:16px;display:flex;justify-content:space-between;align-items:baseline}
+.month h3 span{font:500 11.5px system-ui,sans-serif;color:var(--muted)}
+.month.now{border-color:var(--olive);box-shadow:0 0 0 1px var(--olive) inset}
+.hint{font-size:12px;color:var(--earth);margin-top:3px}
+.chk{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);margin:0;color:var(--ink);font-size:14px}
+.chk:first-child{border-top:0}
+.chk input{width:20px;height:20px;flex:none}
+.empty{text-align:center;color:var(--muted);padding:26px 10px}
+.modal{position:fixed;inset:0;background:rgba(30,30,20,.45);display:none;align-items:flex-end;justify-content:center;z-index:2000}
+.modal.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.sheet h2{font-size:20px;margin-bottom:4px}
+.multi{display:flex;flex-wrap:wrap;gap:6px;max-height:180px;overflow:auto;padding:4px 0}
+.multi label{margin:0;display:flex;align-items:center;gap:5px;background:var(--olive-l);color:var(--olive-d);padding:5px 9px;border-radius:20px;font-size:12.5px;cursor:pointer}
+.multi input{width:auto}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:3000;max-width:90vw;text-align:center}
+.toast.on{opacity:1}
+h2.sec{font-size:18px;margin:4px 0 10px}
+.mono{font-family:ui-monospace,Menlo,monospace}
+</style>
+</head>
+<body>
+<header>
+  <div class="htop">
+    <div><h1>Mi Olivar</h1><p>Valdaracete (Madrid) · cuaderno de explotación</p></div>
+    <button class="sync" id="syncBtn" data-goto="datos">Drive</button>
+  </div>
+  <div class="stats" id="stats"></div>
+</header>
+<main id="view"></main>
+<div id="mapwrap">
+  <div class="toolbar">
+    <select id="mapPick"><option value="">Toca una parcela de la lista o elige aquí para ubicarla…</option></select>
+    <label class="chk" style="border:0;white-space:nowrap;margin:0"><input type="checkbox" id="soloOl" checked> Solo olivos</label>
+  </div>
+  <div id="mapMsg" class="note" style="margin:-4px 0 8px"></div>
+  <div id="map"></div>
+  <p class="note">Ortofoto del PNOA (IGN) con las parcelas del Catastro encima. Para ubicar una parcela: elígela arriba y toca el mapa en su centro.</p>
+</div>
+<nav id="nav"></nav>
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+"use strict";
+/* ================== CONFIGURACIÓN ================== */
+const APP_VERSION = "1.0";
+/* Pega aquí tu ID de cliente de Google para no tener que escribirlo en cada dispositivo (opcional). */
+const DEFAULT_CLIENT_ID = "";
+const MUNI = "Valdaracete, Madrid";
+const CENTRO = [40.207, -3.195];
+const DATA_KEY = "miolivar.datos", META_KEY = "miolivar.meta";
+const DRIVE_FOLDER = "Mi Olivar", DRIVE_JSON = "mi-olivar-datos.json", DRIVE_XLSX = "Mi Olivar - datos.xlsx";
+const SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+const TIPOS_LABOR = ["Poda","Abonado","Tratamiento fitosanitario","Herbicida / desbroce","Laboreo","Riego","Recogida","Análisis","Otra"];
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const PISTAS = ["Recogida (final) · poda","Poda · abonado de fondo","Poda · abonado","Fin de poda · tratamiento repilo","Floración: vigilar plagas","Cuajado","Análisis foliar (julio)","Endurecimiento del hueso","Vigilar mosca del olivo","Tratamiento cobre · preparar recogida","Recogida","Recogida"];
+
+/* La app empieza vacía: tus parcelas se cargan importando tu archivo de datos (así no quedan publicadas en internet). */
+function seed(){ return { app:"mi-olivar", schema:1, modifiedAt:"1970-01-01T00:00:00.000Z", parcelas:[], labores:[], analisis:[], rutas:[] }; }
+
+/* ================== ALMACÉN LOCAL ================== */
+let S, M;
+function loadLocal(){
+  try{ S = JSON.parse(localStorage.getItem(DATA_KEY)); }catch(e){ S=null; }
+  if(!S || !Array.isArray(S.parcelas)){ S = seed(); persist(false); }
+  if(!Array.isArray(S.rutas)) S.rutas = [];
+  try{ M = JSON.parse(localStorage.getItem(META_KEY)) || {}; }catch(e){ M = {}; }
+  if(!M.clientId && DEFAULT_CLIENT_ID) M.clientId = DEFAULT_CLIENT_ID;
+}
+function persist(touch=true){
+  if(touch) S.modifiedAt = new Date().toISOString();
+  try{ localStorage.setItem(DATA_KEY, JSON.stringify(S)); }
+  catch(e){ toast("¡No se ha podido guardar en este dispositivo!"); }
+}
+function saveMeta(){ try{ localStorage.setItem(META_KEY, JSON.stringify(M)); }catch(e){} }
+const pendiente = () => (S.parcelas.length||S.labores.length||S.analisis.length) ? (!M.lastSync || S.modifiedAt > M.lastSync) : false;
+const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+/* ================== UTILIDADES ================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num = v => { if(v===""||v==null) return null; const n=+String(v).replace(",","."); return isNaN(n)?null:n; };
+const fmt = (n,d=0) => n==null ? "—" : n.toLocaleString("es-ES",{maximumFractionDigits:d,minimumFractionDigits:d});
+const fdate = s => { if(!s) return ""; const [y,m,d]=s.split("-"); return `${d}/${m}/${y}`; };
+const fdt = iso => iso ? new Date(iso).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}) : "nunca";
+function toast(t,ms=2200){ const el=$("#toast"); el.textContent=t; el.classList.add("on"); clearTimeout(toast.t); toast.t=setTimeout(()=>el.classList.remove("on"),ms); }
+const P = id => S.parcelas.find(p=>p.id===id);
+/* Nombre con tipo y referencia, para orientarse en cualquier parte de la app */
+const nom = p => p ? `${p.nombre} (${p.tipo==="tierra"?"T":"O"}) · Pol. ${p.poligono} Parc. ${p.parcela}` : "?";
+const estimados = p => (p.tipo!=="tierra" && p.superficie && p.densidad) ? Math.round(p.superficie * p.densidad) : null;
+const olivos = p => p.olivosContados ?? estimados(p);
+const tieneGeo = p => p.lat!=null && p.lng!=null;
+const sortP = arr => [...arr].sort((a,b)=>(a.orden??999)-(b.orden??999) || a.nombre.localeCompare(b.nombre));
+const catastroURL = rc => `https://www1.sedecatastro.gob.es/Cartografia/mapa.aspx?refcat=${encodeURIComponent(rc)}`;
+const SIGPAC_URL = "https://gestiona.comunidad.madrid/sigpac/";
+const gmaps = p => `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+const llegar = p => { const q=(p.entrada&&p.entrada.lat!=null)?p.entrada:p; return `https://www.google.com/maps/dir/?api=1&destination=${q.lat},${q.lng}&travelmode=driving`; };
+
+/* Diálogo propio (sustituye a confirm) */
+function ask(title, text, buttons){
+  return new Promise(res=>{
+    openModal(`<h2>${esc(title)}</h2><p class="note" style="font-size:14px">${text}</p>
+      <div class="btns">${buttons.map((b,i)=>`<button class="btn ${b.cls||""}" data-ans="${i}">${esc(b.label)}</button>`).join("")}</div>`);
+    $("#sheet").querySelectorAll("[data-ans]").forEach(b=>b.onclick=()=>{ closeModal(); res(buttons[+b.dataset.ans].value); });
+  });
+}
+
+/* ================== NAVEGACIÓN ================== */
+let tab="parcelas", detailId=null, filtro="", ruta=[], calYear=new Date().getFullYear();
+const ICONS = {
+ parcelas:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+ mapa:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></svg>',
+ labores:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4l6 6-9 9H5v-6z"/><path d="M12 6l6 6"/></svg>',
+ calendario:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
+ analisis:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3h6M10 3v6l-5 9a2 2 0 002 3h10a2 2 0 002-3l-5-9V3"/></svg>',
+ ruta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h7a3 3 0 000-6H9a3 3 0 010-6h7"/></svg>',
+ datos:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 18a4 4 0 01-.5-8A6 6 0 0118 9a4.5 4.5 0 01-1 9z"/><path d="M12 12v6M9.5 15.5L12 18l2.5-2.5"/></svg>'
+};
+const TABS=[["parcelas","Parcelas"],["mapa","Mapa"],["labores","Labores"],["calendario","Calendario"],["analisis","Análisis"],["ruta","Ruta"],["datos","Datos"]];
+function renderNav(){ $("#nav").innerHTML = TABS.map(([k,l])=>`<button data-tab="${k}" class="${tab===k?"on":""}">${ICONS[k]}${l}</button>`).join(""); }
+function go(t){ tab=t; detailId=null; render(); window.scrollTo(0,0); }
+$("#nav").addEventListener("click", e=>{ const b=e.target.closest("button"); if(b) go(b.dataset.tab); });
+
+function renderStats(){
+  const ol=S.parcelas.filter(p=>p.tipo!=="tierra");
+  const sup=ol.reduce((a,p)=>a+(p.superficie||0),0), conSup=ol.filter(p=>p.superficie).length;
+  const arb=ol.reduce((a,p)=>a+(olivos(p)||0),0), pod=ol.filter(p=>p.podado).length;
+  $("#stats").innerHTML=`<div class="stat"><b>${ol.length}</b><span>olivares</span></div>
+   <div class="stat"><b>${conSup?fmt(sup,2)+" ha":"—"}</b><span>${conSup<ol.length?`superficie (${conSup}/${ol.length})`:"superficie"}</span></div>
+   <div class="stat"><b>${arb?"≈"+fmt(arb):"—"}</b><span>olivos</span></div>
+   <div class="stat"><b>${pod}/${ol.length}</b><span>podadas</span></div>`;
+  const sb=$("#syncBtn"); const vacio=!S.parcelas.length&&!S.labores.length&&!S.analisis.length; sb.textContent = vacio ? "Drive" : pendiente() ? "● Sin guardar en Drive" : "✓ Drive al día"; sb.classList.toggle("pend", pendiente());
+}
+
+function render(){
+  renderNav(); renderStats();
+  const isMap = tab==="mapa";
+  $("#mapwrap").style.display = isMap?"block":"none";
+  $("#view").style.display = isMap?"none":"block";
+  if(isMap){ showMap(); return; }
+  const v=$("#view");
+  if(tab==="parcelas") v.innerHTML = detailId ? viewDetalle(P(detailId)) : viewParcelas();
+  else if(tab==="labores") v.innerHTML = viewLabores();
+  else if(tab==="calendario") v.innerHTML = viewCalendario();
+  else if(tab==="analisis") v.innerHTML = viewAnalisis();
+  else if(tab==="ruta") v.innerHTML = viewRuta();
+  else if(tab==="datos") v.innerHTML = viewDatos();
+}
+
+/* ================== VISTAS ================== */
+function viewParcelas(){
+  if(!S.parcelas.length) return `<div class="card" style="text-align:center;padding:22px 16px"><h2 style="margin-bottom:6px">Bienvenida a Mi Olivar</h2>
+    <p class="note" style="font-size:14px">Todavía no hay parcelas en este dispositivo.</p>
+    <div class="btns" style="justify-content:center;flex-direction:column">
+      ${M.clientId?`<button class="btn" data-drive="load">⬇ Cargar mis datos desde Drive</button>`:""}
+      <button class="btn ${M.clientId?"sec":""}" data-import>Importar archivo de datos (.json)</button>
+      <button class="btn ghost" data-newparcela>Empezar de cero: añadir parcela</button>
+    </div>
+    <p class="note">La primera vez, importa el archivo <b>mi-olivar-datos-iniciales.json</b> con tus 18 parcelas.</p></div>`;
+  const f=filtro.toLowerCase();
+  const list=sortP(S.parcelas).filter(p=>!f||(p.nombre+" "+p.poligono+" "+p.parcela+" "+(p.variedad||"")).toLowerCase().includes(f));
+  const sinGeo=S.parcelas.filter(p=>!tieneGeo(p)).length;
+  return `<div class="toolbar"><input id="q" placeholder="Buscar parcela, polígono, variedad…" value="${esc(filtro)}"><button class="btn sec" data-newparcela>+ Parcela</button></div>
+  ${sinGeo?`<div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span class="psub">${sinGeo} parcelas sin ubicación</span><button class="btn small" data-autogeo>Buscar en el Catastro</button></div>`:""}
+  <div class="plist">${list.map(p=>{ const ol=olivos(p);
+    return `<div class="card" data-open="${p.id}"><div><div class="pname">${esc(nom(p))}</div>
+      <div class="psub">${p.paraje?esc(p.paraje):""}${p.superficie?`${p.paraje?" · ":""}${fmt(p.superficie,2)} ha`:""}${ol?` · ${p.olivosContados!=null?"":"≈"}${fmt(ol)} olivos`:""}</div>
+      <div class="badges">${p.tipo==="tierra"?'<span class="badge earth">Tierra</span>':''}${p.podado?'<span class="badge">Podado</span>':''}${p.variedad?`<span class="badge earth">${esc(p.variedad)}</span>`:''}${!tieneGeo(p)?'<span class="badge warn">Sin ubicación</span>':''}</div>
+      </div><div class="chev">›</div></div>`;}).join("")}</div>`;
+}
+
+
+/* Dibujo de los recintos SIGPAC de la parcela (datos del SIGPAC, sin conexión) */
+const USOS = {OV:["Olivar","#7d8f3a"],TA:["Tierra arable","#d9b56f"],PR:["Pasto arbustivo","#a99f62"],PS:["Pastizal","#b7c27a"],PA:["Pasto con arbolado","#93a35c"],CA:["Camino","#c9c1ae"],IM:["Improductivo","#a5a39b"],ED:["Edificación","#b98b7a"],ZU:["Zona urbana","#b98b7a"],FO:["Forestal","#4f6b3a"],AG:["Agua","#7fa7c4"],VI:["Viñedo","#8a4b6b"],FY:["Frutales","#c27a4f"]};
+function dibujoRecintos(p){
+  const R=p.recintos; if(!R||!R.r||!R.r.length) return "";
+  const pad=4, W=R.w+pad*2, H=R.h+pad*2;
+  const pol=R.r.map(r=>{ const c=(USOS[r.u]||[r.u,"#cccccc"])[1];
+    const xy=r.pts.split(" ").map(Number); let cx=0,cy=0,k=xy.length/2; for(let i=0;i<xy.length;i+=2){cx+=xy[i];cy+=xy[i+1];} cx=cx/k+pad; cy=cy/k+pad;
+    const pts=[]; for(let i=0;i<xy.length;i+=2) pts.push((xy[i]+pad).toFixed(1)+","+(xy[i+1]+pad).toFixed(1));
+    return {svg:`<polygon points="${pts.join(" ")}" fill="${c}" fill-opacity=".75" stroke="#f2d33a" stroke-width="1.6" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`, lab:`<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" dominant-baseline="central" font-size="${Math.max(3.2,Math.min(W,H)*0.07).toFixed(1)}" font-weight="700" fill="#1e2410" stroke="#fff" stroke-width=".6" paint-order="stroke">${r.n}</text>`}; });
+  const ley=R.r.slice().sort((a,b)=>a.n-b.n).map(r=>{ const [nom,c]=USOS[r.u]||[r.u,"#ccc"]; return `<div style="display:flex;align-items:center;gap:7px;font-size:12.5px;padding:2px 0"><span style="width:12px;height:12px;border-radius:3px;background:${c};flex:none"></span><b style="min-width:14px">${r.n}</b> ${nom} (${r.u}) · ${fmt(r.s,4)} ha</div>`; }).join("");
+  return `<div style="margin:10px 0 4px"><div style="font-size:12px;color:var(--muted);font-weight:500;margin-bottom:4px">Recintos SIGPAC (norte arriba)</div>
+    <svg viewBox="0 0 ${W.toFixed(1)} ${H.toFixed(1)}" style="width:100%;max-height:300px;background:#efe9d8;border-radius:12px;display:block">${pol.map(x=>x.svg).join("")}${pol.map(x=>x.lab).join("")}</svg>
+    <div style="margin-top:6px">${ley}</div></div>`;
+}
+const sigpacURL = p => `https://gestiona.comunidad.madrid/sigpac/?provincia=28&municipio=155&agregado=0&zona=0&poligono=${p.poligono}&parcela=${p.parcela}`;
+
+function viewDetalle(p){
+  if(!p) return `<button class="back" data-back>‹ Parcelas</button><div class="empty">Parcela no encontrada.</div>`;
+  const est=estimados(p);
+  const labs=S.labores.filter(l=>(l.parcelas||[]).includes(p.id)).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  const ans=S.analisis.filter(a=>a.parcela===p.id).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  return `<button class="back" data-back>‹ Parcelas</button>
+  <div class="card"><h2>${esc(nom(p))}</h2>
+    <div class="psub">Polígono ${p.poligono} · Parcela ${p.parcela} · ${esc(MUNI)}</div>
+    <div class="psub mono" style="margin-top:3px">RC ${esc(p.rc||"—")}</div>
+    ${p.paraje?`<div class="psub">Paraje: ${esc(p.paraje)}</div>`:""}
+    ${p.sigpac?`<p class="note"><b>SIGPAC:</b> ${esc(p.sigpac)}</p>`:""}
+    ${dibujoRecintos(p)}
+    ${p.entrada&&p.entrada.lat!=null?`<p class="note"><b>Entrada para la ruta:</b> ${p.entrada.lat.toFixed(5)}, ${p.entrada.lng.toFixed(5)}${(()=>{const o=S.parcelas.filter(q=>q.id!==p.id&&q.entrada&&q.entrada.lat===p.entrada.lat&&q.entrada.lng===p.entrada.lng).map(q=>nom(q));return o.length?` · compartida con ${o.map(esc).join(", ")}`:"";})()}</p>`:""}
+    ${vistaParcela(p)}
+    <div class="links">
+      ${p.rc?`<a class="btn sec" href="${catastroURL(p.rc)}" target="_blank" rel="noopener">Mapa Catastro</a>`:""}
+      <a class="btn sec" href="${sigpacURL(p)}" target="_blank" rel="noopener">Ver en SIGPAC</a>
+      ${tieneGeo(p)?`<a class="btn" href="${llegar(p)}" target="_blank" rel="noopener">Cómo llegar</a><button class="btn ghost" data-showmap="${p.id}">Ver en el mapa</button>`:""}
+    </div>
+    <div class="btns" style="margin-top:0">
+      <button class="btn ghost small" data-here="${p.id}">📍 Estoy aquí: guardar como entrada</button>
+      <button class="btn ghost small" data-showmap="${p.id}">Ubicar en el mapa</button>
+    </div>
+    ${p.acceso?`<p class="note"><b>Acceso:</b> ${esc(p.acceso)}</p>`:""}
+  </div>
+  <div class="card"><h3>Olivos</h3>
+    <div class="est"><div><small>Superficie</small><b>${p.superficie?fmt(p.superficie,2)+" ha":"—"}</b></div>
+      <div><small>Estimados</small><b>${est?"≈"+fmt(est):"—"}</b></div>
+      <div><small>Contados</small><b>${p.olivosContados!=null?fmt(p.olivosContados):"—"}</b></div></div>
+    <p class="note">${p.tipo==="tierra"?"Parcela de tierra arable: sin olivos.":est?`Estimación: ${fmt(p.superficie,2)} ha × ${p.densidad} olivos/ha. Corrígela con el conteo real.`:"Añade la superficie (la ves en el mapa del Catastro o en SIGPAC) y se calcula la estimación."}</p>
+    <p class="note"><b>Variedad:</b> ${esc(p.variedad||"pendiente de ver in situ")} · <b>Estado:</b> ${esc(p.estado||"—")}</p>
+    ${p.notas?`<p class="note" style="white-space:pre-wrap"><b>Notas:</b> ${esc(p.notas)}</p>`:""}
+    <div class="btns"><button class="btn sec" data-edit="${p.id}">Editar ficha</button></div>
+  </div>
+  <div class="card"><h3 style="display:flex;justify-content:space-between">Labores <button class="btn sec small" data-newlabor="${p.id}">+ Añadir</button></h3>
+    ${labs.length?labs.map(l=>`<div class="item" data-labor="${l.id}" style="cursor:pointer"><b>${esc(l.tipo)}</b> · ${fdate(l.fecha)}${l.notas?`<div class="psub">${esc(l.notas)}</div>`:""}</div>`).join(""):`<p class="note">Sin labores registradas.</p>`}
+  </div>
+  <div class="card"><h3 style="display:flex;justify-content:space-between">Análisis <button class="btn sec small" data-newanal="${p.id}">+ Añadir</button></h3>
+    ${ans.length?ans.map(a=>`<div class="item" data-anal="${a.id}" style="cursor:pointer"><b>${esc(a.tipo)}</b> · ${fdate(a.fecha)}${a.laboratorio?` · ${esc(a.laboratorio)}`:""}<div class="psub" style="white-space:pre-wrap">${esc(a.resultados||"")}</div></div>`).join(""):`<p class="note">Sin análisis de tierra ni de hoja.</p>`}
+  </div>`;
+}
+
+
+/* Imagen de la parcela: ortofoto PNOA (IGN) + linderos del Catastro + recintos SIGPAC (si el servicio responde) */
+function vistaParcela(p){
+  if(!tieneGeo(p)) return "";
+  const lado=Math.max(160, Math.sqrt((p.superficie||0.5)*10000)*1.6);   // metros a cada lado del centro
+  const dLat=lado/111320, dLng=lado/(111320*Math.cos(p.lat*Math.PI/180));
+  const bb=[p.lng-dLng,p.lat-dLat,p.lng+dLng,p.lat+dLat].map(v=>v.toFixed(6)).join(",");
+  const W=640, H=Math.round(W*dLat/dLng);
+  const q=(base,layers,fmt,extra="")=>`${base}SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&SRS=EPSG:4326&BBOX=${bb}&WIDTH=${W}&HEIGHT=${H}&LAYERS=${layers}&STYLES=&FORMAT=${fmt}${extra}`;
+  const orto=q("https://www.ign.es/wms-inspire/pnoa-ma?","OI.OrthoimageCoverage","image/jpeg");
+  const cat=q("https://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?","Catastro","image/png","&TRANSPARENT=TRUE");
+  const sig=q("https://wms.mapa.gob.es/sigpac/wms?","recinto","image/png","&TRANSPARENT=TRUE");
+  return `<div style="position:relative;border-radius:12px;overflow:hidden;margin:10px 0 4px;background:#d9d4c3;aspect-ratio:${W}/${H}">
+    <img src="${orto}" alt="Ortofoto de ${esc(p.nombre)}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentNode.querySelector('.sinimg').style.display='flex'">
+    <img src="${cat}" alt="" style="position:absolute;inset:0;width:100%;height:100%" loading="lazy" onerror="this.remove()">
+    <img src="${sig}" alt="" style="position:absolute;inset:0;width:100%;height:100%" loading="lazy" onerror="this.remove()">
+    <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"><circle cx="50" cy="50" r="1.6" fill="#f3c98b" stroke="#fff" stroke-width=".6"/></svg>
+    <div class="sinimg" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;color:#77735f;font-size:13px">La imagen necesita conexión a internet</div>
+  </div><p class="note" style="margin-top:0">Ortofoto PNOA © IGN · linderos © Catastro · el punto marca el centro de la parcela.</p>`;
+}
+function nombres(ids){ return (ids||[]).map(id=>esc(nom(P(id)))).join(", "); }
+function viewLabores(){
+  const labs=[...S.labores].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  return `<div class="toolbar"><h2 class="sec" style="flex:1;margin:0">Labores</h2><button class="btn" data-newlabor="">+ Nueva labor</button></div>
+  ${labs.length?`<div class="card">${labs.map(l=>`<div class="item" data-labor="${l.id}" style="cursor:pointer"><b>${esc(l.tipo)}</b> · ${fdate(l.fecha)}<div class="psub">${nombres(l.parcelas)}</div>${l.notas?`<div class="psub">${esc(l.notas)}</div>`:""}</div>`).join("")}</div>`
+   :`<div class="empty">Todavía no hay labores.</div>`}`;
+}
+function viewCalendario(){
+  const nowM=new Date().getMonth(), nowY=new Date().getFullYear();
+  const labs=S.labores.filter(l=>l.fecha&&+l.fecha.slice(0,4)===calYear);
+  return `<div class="toolbar"><button class="btn ghost" data-year="-1">‹</button><h2 class="sec" style="flex:1;text-align:center;margin:0">${calYear}</h2><button class="btn ghost" data-year="1">›</button></div>
+  ${MESES.map((m,i)=>{ const ls=labs.filter(l=>+l.fecha.slice(5,7)===i+1).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    return `<div class="card month ${i===nowM&&calYear===nowY?"now":""}"><h3>${m}<span>${ls.length?ls.length+(ls.length>1?" labores":" labor"):""}</span></h3>
+      <div class="hint">Habitual: ${PISTAS[i]}</div>
+      ${ls.map(l=>`<div class="item" data-labor="${l.id}" style="cursor:pointer"><b>${esc(l.tipo)}</b> · ${l.fecha.slice(8,10)}/${l.fecha.slice(5,7)} — <span class="psub">${nombres(l.parcelas)}</span></div>`).join("")}</div>`;}).join("")}
+  <p class="note">Las pistas “Habitual” son orientativas para olivar tradicional de secano; ajústalas con tu técnico.</p>`;
+}
+function viewAnalisis(){
+  const ans=[...S.analisis].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  return `<div class="toolbar"><h2 class="sec" style="flex:1;margin:0">Análisis</h2><button class="btn" data-newanal="">+ Nuevo</button></div>
+  ${ans.length?`<div class="card">${ans.map(a=>`<div class="item" data-anal="${a.id}" style="cursor:pointer"><b>${esc(a.tipo)}</b> · ${fdate(a.fecha)} · ${esc(nom(P(a.parcela)))}${a.laboratorio?`<div class="psub">${esc(a.laboratorio)}</div>`:""}<div class="psub" style="white-space:pre-wrap">${esc(a.resultados||"")}</div></div>`).join("")}</div>`
+   :`<div class="empty">Aquí irán los análisis de tierra y de hoja: fecha, laboratorio y resultados (N, P, K, pH, materia orgánica…).</div>`}`;
+}
+
+/* ---- Ruta ---- */
+/* ---------- RUTAS DE VISITA (optimizadas desde el centro del pueblo) ---------- */
+const PUEBLO = {lat:40.2100, lng:-3.1919};
+let rutaEdit = null, rutaNombre = "";
+function dist(a,b){ const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dg=(b.lng-a.lng)*r; const x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dg/2)**2; return 2*R*Math.asin(Math.sqrt(x)); }
+function optimo(ids){
+  const pts = ids.map(P).filter(p=>p && tieneGeo(p));
+  if(!pts.length) return {orden:[], km:0};
+  /* Las parcelas a menos de 300 m entre sí se visitan juntas (se aparca una vez) */
+  const grupos=[];
+  pts.forEach(p=>{ const g=grupos.find(g=>g.some(q=>dist(p,q)<0.3)); g?g.push(p):grupos.push([p]); });
+  const cs=grupos.map(g=>({lat:g.reduce((a,p)=>a+p.lat,0)/g.length, lng:g.reduce((a,p)=>a+p.lng,0)/g.length, g}));
+  const n=cs.length; let ordG;
+  if(n<=12){
+    const N=1<<n, dp=new Float64Array(N*n).fill(Infinity), par=new Int8Array(N*n).fill(-1);
+    for(let i=0;i<n;i++) dp[(1<<i)*n+i]=dist(PUEBLO,cs[i]);
+    for(let m=1;m<N;m++) for(let j=0;j<n;j++){
+      if(!(m&(1<<j))) continue; const v=dp[m*n+j]; if(v===Infinity) continue;
+      for(let k=0;k<n;k++){ if(m&(1<<k)) continue; const nm=m|(1<<k), c=v+dist(cs[j],cs[k]); if(c<dp[nm*n+k]){ dp[nm*n+k]=c; par[nm*n+k]=j; } }
+    }
+    let best=Infinity, j=-1, m=N-1;
+    for(let i=0;i<n;i++){ const c=dp[m*n+i]+dist(cs[i],PUEBLO); if(c<best){ best=c; j=i; } }
+    ordG=[]; while(j>=0){ ordG.push(cs[j]); const pj=par[m*n+j]; m^=(1<<j); j=pj; }
+    ordG.reverse();
+  } else {
+    const rest=[...cs]; ordG=[]; let cur=PUEBLO;
+    while(rest.length){ let bi=0; rest.forEach((c,i)=>{ if(dist(cur,c)<dist(cur,rest[bi])) bi=i; }); cur=rest.splice(bi,1)[0]; ordG.push(cur); }
+  }
+  const orden=[]; let cur=PUEBLO;
+  ordG.forEach((c,gi)=>{ const rest=[...c.g], next=ordG[gi+1]||PUEBLO;
+    while(rest.length){ let bi=0;
+      rest.forEach((p,i)=>{ if(dist(cur,p)<dist(cur,rest[bi])) bi=i; });
+      if(rest.length===2){ /* deja para el final el más cercano al siguiente grupo */ const [a,b]=rest; const ab=dist(cur,a)+dist(a,b)+dist(b,next), ba=dist(cur,b)+dist(b,a)+dist(a,next); bi = ab<=ba?0:1; }
+      cur=rest.splice(bi,1)[0]; orden.push(cur); } });
+  let km=dist(PUEBLO,orden[0]); for(let i=1;i<orden.length;i++) km+=dist(orden[i-1],orden[i]); km+=dist(orden[orden.length-1],PUEBLO);
+  return {orden:orden.map(p=>p.id), km};
+}
+const KX = Math.cos(40.21*Math.PI/180)*111320, KY = 111320;
+const toLL = (x,y) => ({lat: PUEBLO.lat - y/KY, lng: PUEBLO.lng + x/KX});
+const fromLL = (lat,lng) => [ (lng-PUEBLO.lng)*KX, (PUEBLO.lat-lat)*KY ];
+/* Punto al que se manda Google Maps: la entrada de la parcela si está apuntada; si no, su centro */
+const stopPoint = p => (p.entrada && p.entrada.lat!=null) ? p.entrada : {lat:p.lat, lng:p.lng};
+function mapsLinks(orden){
+  const ll = p => `${p.lat},${p.lng}`, pueblo = `${PUEBLO.lat},${PUEBLO.lng}`;
+  /* las parcelas que comparten entrada (o están a menos de 40 m) son una sola parada */
+  const stops = [];
+  orden.map(P).map(stopPoint).forEach(s=>{ const last=stops[stops.length-1]; if(!last || dist(last,s)>0.04) stops.push(s); });
+  const links = [];
+  for(let i=0;i<stops.length;i+=9){
+    const chunk = stops.slice(i,i+9), last = i+9>=stops.length;
+    const origin = i===0 ? pueblo : ll(stops[i-1]);
+    const dest = last ? pueblo : ll(chunk[chunk.length-1]);
+    const wps = (last ? chunk : chunk.slice(0,-1)).map(ll).join("|");
+    links.push(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}${wps?`&waypoints=${encodeURIComponent(wps)}`:""}&travelmode=driving`);
+  }
+  return links;
+}
+function linksHTML(orden){
+  const ls = mapsLinks(orden);
+  return ls.map((u,i)=>`<a class="btn${i?" sec":""}" href="${u}" target="_blank" rel="noopener">${ls.length>1?`Google Maps (tramo ${i+1})`:"Abrir en Google Maps"}</a>`).join("");
+}
+function viewRuta(){
+  const rutas = (S.rutas||[]).slice().sort((a,b)=>(a.orden??99)-(b.orden??99) || a.nombre.localeCompare(b.nombre));
+  const conGeo = sortP(S.parcelas).filter(tieneGeo);
+  ruta = ruta.filter(id=>P(id)&&tieneGeo(P(id)));
+  const calc = optimo(ruta);
+  return `<h2 class="sec">Rutas de visita</h2>
+  <p class="note" style="margin:-4px 0 10px">Todas salen y vuelven al centro del pueblo. El orden se calcula para recorrer la menor distancia (en línea recta; los caminos reales pueden alargarla).</p>
+  ${rutas.map(r=>{ const o=optimo(r.parcelas||[]); return `<div class="card">
+    <h3 style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">${esc(r.nombre)}<span class="psub" style="font-family:inherit">≈ ${fmt(o.km,1)} km · ${o.orden.length} parcelas</span></h3>
+    ${o.orden.map((id,i)=>`<div class="item">${i+1}. ${esc(nom(P(id)))}${P(id).paraje?` <span class="psub">· ${esc(P(id).paraje)}</span>`:""}</div>`).join("")}
+    <div class="btns">${o.orden.length?linksHTML(o.orden):""}<button class="btn ghost small" data-editruta="${r.id}">Editar</button><button class="btn danger small" data-delruta="${r.id}">Borrar</button></div>
+  </div>`;}).join("") || `<p class="note">Aún no hay rutas guardadas.</p>`}
+  <div class="card" id="builder">
+    <h3>${rutaEdit?"Editar ruta":"Nueva ruta"}</h3>
+    <p class="note">Marca las parcelas y te calculo el orden óptimo.</p>
+    ${conGeo.length?conGeo.map(p=>`<label class="chk"><input type="checkbox" data-ruta="${p.id}" ${ruta.includes(p.id)?"checked":""}><span><b>${esc(nom(p))}</b></span></label>`).join(""):`<p class="note">Ninguna parcela tiene ubicación todavía.</p>`}
+    ${ruta.length?`<div style="margin-top:10px"><b>Orden óptimo · ≈ ${fmt(calc.km,1)} km</b>${calc.orden.map((id,i)=>`<div class="item">${i+1}. ${esc(nom(P(id)))}</div>`).join("")}</div>
+      <label>Nombre de la ruta</label><input id="rutaNombre" value="${esc(rutaNombre)}" placeholder="Ruta Norte, Recogida día 1…">
+      <div class="btns"><button class="btn" data-saveruta>Guardar ruta</button>${linksHTML(calc.orden)}${rutaEdit?`<button class="btn ghost" data-cancelruta>Cancelar</button>`:""}</div>`:""}
+  </div>`;
+}
+
+/* ---- Datos / Drive ---- */
+function viewDatos(){
+  return `<h2 class="sec">Datos y Google Drive</h2>
+  ${pendiente()?`<div class="alert">Hay cambios en este dispositivo que no están guardados en Drive.</div>`:`<div class="ok">Todo guardado en Drive.</div>`}
+  <div class="card">
+    <p class="note" style="margin-top:0">Último cambio en este dispositivo: <b>${fdt(S.modifiedAt)}</b><br>Última sincronización con Drive: <b>${fdt(M.lastSyncAt)}</b></p>
+    <div class="btns"><button class="btn" data-drive="save" ${M.clientId?"":"disabled"}>⬆ Guardar en Drive</button><button class="btn sec" data-drive="load" ${M.clientId?"":"disabled"}>⬇ Cargar desde Drive</button></div>
+    <p class="note">Se guarda en tu Drive, carpeta “${DRIVE_FOLDER}”: <b>${DRIVE_JSON}</b> (los datos de la app) y <b>${DRIVE_XLSX}</b> (para abrir en Excel o Google Sheets).</p>
+    <p class="note">Rutina: al terminar en el campo, <b>Guardar en Drive</b>. En casa, antes de tocar nada, <b>Cargar desde Drive</b>.</p>
+  </div>
+  <div class="card"><h3>Conexión con Google</h3>
+    <label>ID de cliente de Google (Client ID)</label>
+    <input id="clientId" class="mono" placeholder="123456-abc.apps.googleusercontent.com" value="${esc(M.clientId||"")}">
+    <div class="btns"><button class="btn sec" data-saveclient>Guardar ID</button></div>
+    <p class="note">Se configura una sola vez en cada dispositivo. Sigue la guía de instalación.</p>
+  </div>
+  <div class="card"><h3>Copia en archivo (sin Drive)</h3>
+    <div class="btns"><button class="btn ghost" data-export>Descargar copia (.json)</button><button class="btn ghost" data-xlsx>Descargar Excel</button><button class="btn ghost" data-import>Importar copia</button></div>
+  </div>
+  <p class="note" style="text-align:center">Mi Olivar v${APP_VERSION} · los datos se guardan en este dispositivo y en tu Drive; nadie más tiene acceso.</p>`;
+}
+
+/* ================== FORMULARIOS ================== */
+function openModal(html){ $("#sheet").innerHTML=html; $("#modal").classList.add("on"); }
+function closeModal(){ $("#modal").classList.remove("on"); }
+$("#modal").addEventListener("click", e=>{ if(e.target.id==="modal"||e.target.closest("[data-close]")) closeModal(); });
+function parseCoords(t){
+  if(!t) return null;
+  const m=String(t).match(/(-?\d{1,2}\.\d{3,})\s*,\s*(-?\d{1,3}\.\d{3,})/)||String(t).match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+  return m?{lat:+m[1],lng:+m[2]}:null;
+}
+function formParcela(p){
+  const isNew=!p; p=p||{id:"p"+uid(),nombre:"",poligono:"",parcela:"",rc:"",tipo:"olivar",podado:false,orden:S.parcelas.length+1,densidad:100};
+  openModal(`<h2>${isNew?"Nueva parcela":esc(nom(p))}</h2><form id="fParcela">
+    <label>Nombre</label><input name="nombre" value="${esc(p.nombre)}" required>
+    <div class="row"><div><label>Polígono</label><input name="poligono" inputmode="numeric" value="${p.poligono??""}"></div><div><label>Parcela</label><input name="parcela" inputmode="numeric" value="${p.parcela??""}"></div></div>
+    <label>Referencia catastral</label><input name="rc" class="mono" value="${esc(p.rc||"")}">
+    <div class="row"><div><label>Tipo</label><select name="tipo"><option value="olivar" ${p.tipo!=="tierra"?"selected":""}>Olivar</option><option value="tierra" ${p.tipo==="tierra"?"selected":""}>Tierra</option></select></div>
+    <div><label>Podado</label><select name="podado"><option value="1" ${p.podado?"selected":""}>Sí</option><option value="0" ${!p.podado?"selected":""}>No</option></select></div></div>
+    <label>Ubicación (coordenadas o enlace de Google Maps)</label><input name="coords" placeholder="40.2051, -3.1872" value="${tieneGeo(p)?p.lat+", "+p.lng:""}">
+    <label>Entrada / aparcamiento para la ruta (opcional)</label><input name="entrada" placeholder="Coordenadas de por dónde se entra" value="${p.entrada&&p.entrada.lat!=null?p.entrada.lat+", "+p.entrada.lng:""}">
+    <div class="row"><div><label>Superficie (ha)</label><input name="superficie" inputmode="decimal" value="${p.superficie??""}"></div><div><label>Densidad (olivos/ha)</label><input name="densidad" inputmode="numeric" value="${p.densidad??100}"></div></div>
+    <p class="note">Tradicional: 80–120 olivos/ha (marco 10×10 m = 100).</p>
+    <div class="row"><div><label>Olivos contados</label><input name="olivosContados" inputmode="numeric" value="${p.olivosContados??""}"></div>
+    <div><label>Variedad</label><input name="variedad" list="vars" value="${esc(p.variedad||"")}"><datalist id="vars"><option>Cornicabra</option><option>Manzanilla</option><option>Picual</option><option>Arbequina</option><option>Hojiblanca</option><option>Mezcla</option></datalist></div></div>
+    <label>Estado de los árboles</label><select name="estado">${["","Bueno","Regular","Malo","Muy viejo / a renovar"].map(x=>`<option ${p.estado===x?"selected":""}>${x}</option>`).join("")}</select>
+    <label>Acceso (por dónde se entra)</label><input name="acceso" value="${esc(p.acceso||"")}">
+    <label>Notas</label><textarea name="notas">${esc(p.notas||"")}</textarea>
+    <div class="btns"><button class="btn" type="submit">Guardar</button>${!isNew?`<button class="btn danger" type="button" id="del">Borrar parcela</button>`:""}<button class="btn ghost" type="button" data-close>Cancelar</button></div>
+  </form>`);
+  $("#fParcela").onsubmit=e=>{
+    e.preventDefault(); const f=new FormData(e.target); const raw=f.get("coords").trim(); const c=parseCoords(raw);
+    if(raw&&!c){ toast("No reconozco esas coordenadas"); return; }
+    const ent=parseCoords(f.get("entrada")); if(String(f.get("entrada")||"").trim()&&!ent){ toast("No reconozco las coordenadas de la entrada"); return; }
+    p.entrada=ent||null;
+    Object.assign(p,{nombre:f.get("nombre").trim(),poligono:num(f.get("poligono")),parcela:num(f.get("parcela")),rc:f.get("rc").trim().toUpperCase(),
+      tipo:f.get("tipo"),podado:f.get("podado")==="1",lat:c?c.lat:null,lng:c?c.lng:null,superficie:num(f.get("superficie")),densidad:num(f.get("densidad"))??100,
+      olivosContados:num(f.get("olivosContados")),variedad:f.get("variedad").trim(),estado:f.get("estado"),acceso:f.get("acceso").trim(),notas:f.get("notas").trim()});
+    if(isNew) S.parcelas.push(p);
+    persist(); closeModal(); toast("Guardado"); render();
+  };
+  if(!isNew) $("#del").onclick=async()=>{
+    if(await ask("¿Borrar la parcela?","Se borra la ficha de “"+esc(nom(p))+"”. Sus labores y análisis se quedan, pero sin esta parcela.",[{label:"Sí, borrar",cls:"danger",value:true},{label:"Cancelar",cls:"ghost",value:false}])){
+      S.parcelas=S.parcelas.filter(x=>x.id!==p.id); persist(); detailId=null; render(); toast("Parcela borrada");
+    }
+  };
+}
+function multiParcelas(sel){ return `<div class="multi">${sortP(S.parcelas).map(p=>`<label><input type="checkbox" name="parcelas" value="${p.id}" ${sel.includes(p.id)?"checked":""}>${esc(nom(p))}</label>`).join("")}</div>`; }
+function formLabor(l,pre){
+  const isNew=!l; l=l||{id:uid(),fecha:new Date().toISOString().slice(0,10),tipo:"Poda",parcelas:pre?[pre]:[],notas:""};
+  openModal(`<h2>${isNew?"Nueva labor":"Editar labor"}</h2><form id="fLabor">
+    <div class="row"><div><label>Fecha</label><input type="date" name="fecha" value="${l.fecha}" required></div>
+    <div><label>Tipo</label><select name="tipo">${TIPOS_LABOR.map(t=>`<option ${l.tipo===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
+    <label>Parcelas</label>${multiParcelas(l.parcelas||[])}
+    <label>Notas (producto, dosis, kilos, quién lo hizo…)</label><textarea name="notas">${esc(l.notas||"")}</textarea>
+    <div class="btns"><button class="btn" type="submit">Guardar</button>${!isNew?`<button class="btn danger" type="button" id="del">Borrar</button>`:""}<button class="btn ghost" type="button" data-close>Cancelar</button></div>
+  </form>`);
+  $("#fLabor").onsubmit=e=>{
+    e.preventDefault(); const f=new FormData(e.target); const ps=f.getAll("parcelas");
+    if(!ps.length){ toast("Marca al menos una parcela"); return; }
+    Object.assign(l,{fecha:f.get("fecha"),tipo:f.get("tipo"),parcelas:ps,notas:f.get("notas").trim()});
+    if(isNew) S.labores.push(l); persist(); closeModal(); toast("Guardado"); render();
+  };
+  if(!isNew) $("#del").onclick=async()=>{ if(await ask("¿Borrar la labor?","No se puede deshacer.",[{label:"Sí, borrar",cls:"danger",value:true},{label:"Cancelar",cls:"ghost",value:false}])){ S.labores=S.labores.filter(x=>x.id!==l.id); persist(); render(); toast("Borrada"); } };
+}
+function formAnalisis(a,pre){
+  const isNew=!a; a=a||{id:uid(),fecha:new Date().toISOString().slice(0,10),tipo:"Foliar (hoja)",parcela:pre||"",laboratorio:"",resultados:""};
+  openModal(`<h2>${isNew?"Nuevo análisis":"Editar análisis"}</h2><form id="fAnal">
+    <div class="row"><div><label>Fecha</label><input type="date" name="fecha" value="${a.fecha}" required></div>
+    <div><label>Tipo</label><select name="tipo">${["Foliar (hoja)","Suelo (tierra)","Agua","Otro"].map(t=>`<option ${a.tipo===t?"selected":""}>${t}</option>`).join("")}</select></div></div>
+    <label>Parcela</label><select name="parcela" required><option value="">—</option>${sortP(S.parcelas).map(p=>`<option value="${p.id}" ${a.parcela===p.id?"selected":""}>${esc(nom(p))}</option>`).join("")}</select>
+    <label>Laboratorio</label><input name="laboratorio" value="${esc(a.laboratorio||"")}">
+    <label>Resultados y recomendación</label><textarea name="resultados" style="min-height:120px" placeholder="N 1,6 % · P 0,12 % · K 0,7 %…">${esc(a.resultados||"")}</textarea>
+    <div class="btns"><button class="btn" type="submit">Guardar</button>${!isNew?`<button class="btn danger" type="button" id="del">Borrar</button>`:""}<button class="btn ghost" type="button" data-close>Cancelar</button></div>
+  </form>`);
+  $("#fAnal").onsubmit=e=>{
+    e.preventDefault(); const f=new FormData(e.target);
+    Object.assign(a,{fecha:f.get("fecha"),tipo:f.get("tipo"),parcela:f.get("parcela"),laboratorio:f.get("laboratorio").trim(),resultados:f.get("resultados").trim()});
+    if(isNew) S.analisis.push(a); persist(); closeModal(); toast("Guardado"); render();
+  };
+  if(!isNew) $("#del").onclick=async()=>{ if(await ask("¿Borrar el análisis?","No se puede deshacer.",[{label:"Sí, borrar",cls:"danger",value:true},{label:"Cancelar",cls:"ghost",value:false}])){ S.analisis=S.analisis.filter(x=>x.id!==a.id); persist(); render(); toast("Borrado"); } };
+}
+
+/* ================== UBICACIÓN ================== */
+function aquí(id){
+  const p=P(id);
+  if(!navigator.geolocation){ toast("Este dispositivo no da la ubicación"); return; }
+  toast("Buscando tu posición…",4000);
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const {latitude:lat, longitude:lng, accuracy}=pos.coords;
+    const ok=await ask("¿Guardar como entrada?",`Posición: ${lat.toFixed(5)}, ${lng.toFixed(5)} (precisión ±${Math.round(accuracy)} m). Se usará como punto de entrada de <b>${esc(nom(p))}</b> en “Cómo llegar” y en las rutas.`,[{label:"Guardar",value:true},{label:"Cancelar",cls:"ghost",value:false}]);
+    if(ok){ p.entrada={lat:+lat.toFixed(6), lng:+lng.toFixed(6)}; persist(); render(); toast("Entrada guardada"); }
+  }, err=>toast(err.code===1?"Has denegado el permiso de ubicación":"No se pudo obtener la ubicación"), {enableHighAccuracy:true,timeout:20000});
+}
+/* Consulta al Catastro (servicio público de coordenadas) */
+async function catastroCoords(rc){
+  const rc14=rc.slice(0,14);
+  const urls=[
+    `https://ovc.catastro.meh.es/OVCServWeb/OVCWcfCallejero/COVCCoordenadas.svc/json/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RefCat=${rc14}`,
+    `https://ovc.catastro.meh.es/ovcservweb/OVCSWLocalizacionRC/OVCCoordenadas.asmx/Consulta_CPMRC?Provincia=&Municipio=&SRS=EPSG:4326&RC=${rc14}`
+  ];
+  for(const u of urls){
+    try{
+      const r=await fetch(u); if(!r.ok) continue; const t=await r.text();
+      const x=t.match(/xcen["']?\s*[:>]\s*["']?(-?\d+(?:\.\d+)?)/i), y=t.match(/ycen["']?\s*[:>]\s*["']?(-?\d+(?:\.\d+)?)/i);
+      if(x&&y) return {lat:+(+y[1]).toFixed(6), lng:+(+x[1]).toFixed(6)};
+    }catch(e){}
+  }
+  return null;
+}
+async function autoGeo(){
+  const pend=S.parcelas.filter(p=>!tieneGeo(p)&&p.rc);
+  if(!pend.length){ toast("Todas tienen ubicación"); return; }
+  let ok=0; toast(`Consultando el Catastro (0/${pend.length})…`,60000);
+  for(const [i,p] of pend.entries()){
+    const c=await catastroCoords(p.rc); if(c){ p.lat=c.lat; p.lng=c.lng; ok++; }
+    toast(`Consultando el Catastro (${i+1}/${pend.length})…`,60000);
+  }
+  if(ok){ persist(); render(); }
+  if(ok) toast(`Ubicadas ${ok} de ${pend.length} parcelas`,3500);
+  else ask("No se pudo consultar el Catastro","El Catastro no ha respondido a la app (puede que su servicio no permita consultas desde aplicaciones web, o que no haya conexión). Puedes ubicar cada parcela desde el <b>Mapa</b> tocando sobre ella, o con <b>“Estoy aquí”</b> cuando estés en la finca.",[{label:"Entendido",value:true}]);
+}
+
+/* ================== MAPA ================== */
+let map=null, markers=null, pickId="";
+function showMap(){
+  if(typeof L==="undefined"){ $("#mapMsg").textContent="El mapa necesita conexión a internet."; return; }
+  if(!map){
+    map=L.map("map",{zoomControl:true}).setView(CENTRO,13);
+    const pnoa=L.tileLayer.wms("https://www.ign.es/wms-inspire/pnoa-ma?",{layers:"OI.OrthoimageCoverage",format:"image/jpeg",maxZoom:20,attribution:"PNOA © IGN"});
+    const osm=L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"});
+    const cat=L.tileLayer.wms("https://ovc.catastro.meh.es/Cartografia/WMS/ServidorWMS.aspx?",{layers:"Catastro",format:"image/png",transparent:true,maxZoom:20,attribution:"© Catastro"});
+    pnoa.addTo(map); cat.addTo(map);
+    L.control.layers({"Ortofoto (PNOA)":pnoa,"Mapa (OpenStreetMap)":osm},{"Parcelas del Catastro":cat}).addTo(map);
+    markers=L.layerGroup().addTo(map);
+    map.on("click",async e=>{
+      if(!pickId) return; const p=P(pickId);
+      const ok=await ask("¿Ubicar aquí?",`Guardar <b>${esc(nom(p))}</b> en ${e.latlng.lat.toFixed(5)}, ${e.latlng.lng.toFixed(5)}.`,[{label:"Guardar",value:true},{label:"Cancelar",cls:"ghost",value:false}]);
+      if(ok){ p.lat=+e.latlng.lat.toFixed(6); p.lng=+e.latlng.lng.toFixed(6); persist(); renderStats(); drawMarkers(); toast("Ubicación guardada"); }
+    });
+    $("#mapPick").onchange=e=>{ pickId=e.target.value; mapMsg(); };
+    $("#soloOl").onchange=e=>{ soloOlivos=e.target.checked; drawMarkers(true); };
+  }
+  $("#mapPick").innerHTML=`<option value="">Elige una parcela para ubicarla…</option>`+sortP(S.parcelas).map(p=>`<option value="${p.id}" ${p.id===pickId?"selected":""}>${esc(nom(p))}${tieneGeo(p)?"":" (sin ubicar)"}</option>`).join("");
+  mapMsg(); setTimeout(()=>{ map.invalidateSize(); drawMarkers(true); },50);
+}
+function mapMsg(){ const p=P(pickId); $("#mapMsg").innerHTML = p ? `Toca el mapa para ubicar <b>${esc(nom(p))}</b>.` : ""; }
+let soloOlivos=true;
+function drawMarkers(fit){
+  markers.clearLayers(); const pts=[];
+  /* contornos SIGPAC de las parcelas */
+  S.parcelas.filter(p=>p.geo&&p.geo.length&&(!soloOlivos||p.tipo!=="tierra")).forEach(p=>{
+    p.geo.forEach(r=>{ const v=r.pts.split(" ").map(Number), ll=[]; for(let i=0;i<v.length;i+=2){ const q=toLL(v[i],v[i+1]); ll.push([q.lat,q.lng]); }
+      L.polygon(ll,{color:"#f2d33a",weight:2,fillColor:r.u==="OV"?"#7d8f3a":"#c9c1ae",fillOpacity:.45}).bindPopup(`<b>${esc(nom(p))}</b> · ${r.u}<br><a href="#" data-open="${p.id}">Ficha</a>`).addTo(markers); });
+  });
+  const vistos=new Set();
+  S.parcelas.filter(p=>p.entrada&&p.entrada.lat!=null&&(!soloOlivos||p.tipo!=="tierra")).forEach(p=>{ const k=p.entrada.lat+","+p.entrada.lng; if(vistos.has(k)) return; vistos.add(k);
+    L.marker([p.entrada.lat,p.entrada.lng],{icon:L.divIcon({className:"",html:'<div style="background:#fff;border:2px solid #2b2a22;border-radius:5px;width:20px;height:20px;font:700 12px system-ui;display:flex;align-items:center;justify-content:center">P</div>',iconSize:[20,20]})}).bindPopup("Entrada / aparcamiento").addTo(markers); });
+
+  S.parcelas.filter(tieneGeo).filter(p=>!soloOlivos||p.tipo!=="tierra").forEach(p=>{
+    const m=L.circleMarker([p.lat,p.lng],{radius:9,color:"#fff",weight:2,fillColor:p.tipo==="tierra"?"#9a6b3f":"#5d6b2f",fillOpacity:.95})
+      .bindPopup(`<b>${esc(nom(p))}</b><br><a href="${llegar(p)}" target="_blank" rel="noopener">Cómo llegar</a> · <a href="#" data-open="${p.id}">Ficha</a>`);
+    m.bindTooltip(esc(nom(p)),{permanent:true,direction:"right",offset:[8,0]}); m.addTo(markers); pts.push([p.lat,p.lng]);
+  });
+  const sel=P(pickId);
+  if(sel&&tieneGeo(sel)) map.setView([sel.lat,sel.lng],17);
+  else if(fit&&pts.length) map.fitBounds(pts,{padding:[30,30],maxZoom:16});
+}
+
+/* ================== EXCEL Y COPIAS ================== */
+function buildXlsx(){
+  if(typeof XLSX==="undefined") throw new Error("La librería de Excel no está cargada (falta conexión).");
+  const wb=XLSX.utils.book_new();
+  const parc=sortP(S.parcelas).map(p=>({"Nombre":p.nombre,"Tipo":p.tipo,"Polígono":p.poligono,"Parcela":p.parcela,"Ref. catastral":p.rc,"Paraje":p.paraje||"","Superficie (ha)":p.superficie,
+    "Densidad (olivos/ha)":p.densidad,"Olivos estimados":estimados(p),"Olivos contados":p.olivosContados,"Variedad":p.variedad,"Estado":p.estado,"Podado":p.podado?"Sí":"No",
+    "Latitud":p.lat,"Longitud":p.lng,"SIGPAC":p.sigpac||"","Acceso":p.acceso,"Notas":p.notas}));
+  const lab=[...S.labores].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(l=>({"Fecha":l.fecha,"Tipo":l.tipo,"Parcelas":(l.parcelas||[]).map(id=>nom(P(id))).join(", "),"Nº parcelas":(l.parcelas||[]).length,"Notas":l.notas}));
+  const ana=[...S.analisis].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(a=>({"Fecha":a.fecha,"Tipo":a.tipo,"Parcela":nom(P(a.parcela)),"Laboratorio":a.laboratorio,"Resultados":a.resultados}));
+  const add=(rows,name,cols)=>{ const ws=XLSX.utils.json_to_sheet(rows.length?rows:[Object.fromEntries(cols.map(c=>[c,""]))],{header:cols}); ws["!cols"]=cols.map(c=>({wch:Math.max(10,c.length+2)})); XLSX.utils.book_append_sheet(wb,ws,name); };
+  add(parc,"Parcelas",["Nombre","Tipo","Polígono","Parcela","Ref. catastral","Paraje","Superficie (ha)","Densidad (olivos/ha)","Olivos estimados","Olivos contados","Variedad","Estado","Podado","Latitud","Longitud","SIGPAC","Acceso","Notas"]);
+  add(lab,"Labores",["Fecha","Tipo","Parcelas","Nº parcelas","Notas"]);
+  add(ana,"Análisis",["Fecha","Tipo","Parcela","Laboratorio","Resultados"]);
+  const rut=(S.rutas||[]).map(r=>{ const o=optimo(r.parcelas||[]); return {"Ruta":r.nombre,"Km aprox. (línea recta)":+o.km.toFixed(1),"Orden de visita":o.orden.map(id=>nom(P(id))).join(" → ")}; });
+  add(rut,"Rutas",["Ruta","Km aprox. (línea recta)","Orden de visita"]);
+  return new Blob([XLSX.write(wb,{type:"array",bookType:"xlsx"})],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function download(blob,name){ const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},1000); }
+function validData(d){ return d && d.app==="mi-olivar" && Array.isArray(d.parcelas) && Array.isArray(d.labores) && Array.isArray(d.analisis); }
+
+/* ================== GOOGLE DRIVE ================== */
+let gisReady=null, token=null, tokenExp=0;
+function loadGis(){
+  if(gisReady) return gisReady;
+  gisReady=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.onload=res; s.onerror=()=>{gisReady=null; rej(new Error("No se pudo cargar el acceso de Google (¿sin conexión?)."));}; document.head.appendChild(s); });
+  return gisReady;
+}
+async function getToken(){
+  if(token && Date.now()<tokenExp-60000) return token;
+  if(!M.clientId) throw new Error("Falta el ID de cliente de Google (pestaña Datos).");
+  await loadGis();
+  return new Promise((res,rej)=>{
+    const client=google.accounts.oauth2.initTokenClient({client_id:M.clientId, scope:SCOPE,
+      callback:r=>{ if(r.error){ rej(new Error("Google no dio permiso: "+r.error)); return; } token=r.access_token; tokenExp=Date.now()+(+r.expires_in||3600)*1000; res(token); },
+      error_callback:e=>rej(new Error(e.type==="popup_closed"?"Has cerrado la ventana de Google.":"No se pudo abrir la ventana de Google ("+(e.type||"error")+")."))});
+    client.requestAccessToken({prompt: M.authorized ? "" : "consent"});
+  });
+}
+async function gapi(url,opt={}){
+  const t=await getToken();
+  const r=await fetch(url,{...opt,headers:{...(opt.headers||{}),Authorization:"Bearer "+t}});
+  if(r.status===401){ token=null; throw new Error("La sesión de Google ha caducado; vuelve a intentarlo."); }
+  if(!r.ok){ let m=""; try{ m=(await r.json()).error.message; }catch(e){} throw new Error("Error de Drive "+r.status+(m?": "+m:"")); }
+  return r;
+}
+const qEsc=s=>s.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
+async function findFile(name, parent, mime){
+  let q=`name='${qEsc(name)}' and trashed=false`; if(parent) q+=` and '${parent}' in parents`; if(mime) q+=` and mimeType='${mime}'`;
+  const r=await gapi(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&spaces=drive`);
+  return (await r.json()).files[0]||null;
+}
+async function ensureFolder(){
+  const F="application/vnd.google-apps.folder";
+  let f=await findFile(DRIVE_FOLDER,null,F);
+  if(!f){ const r=await gapi("https://www.googleapis.com/drive/v3/files?fields=id",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:DRIVE_FOLDER,mimeType:F})}); f=await r.json(); }
+  return f.id;
+}
+async function upload(existingId, name, parent, blob){
+  const meta = existingId ? {name} : {name, parents:[parent]};
+  const fd=new FormData(); fd.append("metadata",new Blob([JSON.stringify(meta)],{type:"application/json"})); fd.append("file",blob);
+  const url = existingId ? `https://www.googleapis.com/upload/drive/v3/files/${existingId}?uploadType=multipart&fields=id` : `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id`;
+  return (await gapi(url,{method:existingId?"PATCH":"POST",body:fd})).json();
+}
+async function readRemote(folder){
+  const f=await findFile(DRIVE_JSON,folder); if(!f) return {file:null,data:null};
+  const r=await gapi(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`);
+  let data=null; try{ data=await r.json(); }catch(e){}
+  return {file:f,data:validData(data)?data:null};
+}
+let busy=false;
+async function driveSave(){
+  if(busy) return; busy=true;
+  try{
+    toast("Conectando con Google…",20000);
+    const folder=await ensureFolder(); M.authorized=true; saveMeta();
+    const {file,data}=await readRemote(folder);
+    if(data && data.modifiedAt!==S.modifiedAt && (!M.lastSyncRemote || data.modifiedAt>M.lastSyncRemote)){
+      const choice=await ask("Drive tiene datos más nuevos",`En Drive hay datos guardados el <b>${fdt(data.modifiedAt)}</b> desde otro dispositivo, que este no ha cargado. Si guardas ahora, <b>los sustituirás</b> por los de este dispositivo.`,
+        [{label:"Cancelar",cls:"ghost",value:"no"},{label:"Guardar igualmente",cls:"danger",value:"yes"}]);
+      if(choice!=="yes"){ toast("No se ha guardado nada"); return; }
+    }
+    toast("Guardando en Drive…",20000);
+    await upload(file&&file.id, DRIVE_JSON, folder, new Blob([JSON.stringify(S,null,1)],{type:"application/json"}));
+    let xlsxOk=true;
+    try{ const xf=await findFile(DRIVE_XLSX,folder); await upload(xf&&xf.id, DRIVE_XLSX, folder, buildXlsx()); }catch(e){ xlsxOk=false; }
+    M.lastSync=S.modifiedAt; M.lastSyncRemote=S.modifiedAt; M.lastSyncAt=new Date().toISOString(); saveMeta();
+    toast(xlsxOk?"Guardado en Drive ✓":"Datos guardados en Drive (el Excel no se pudo actualizar)",3500); render();
+  }catch(e){ toast(e.message,5000); }
+  finally{ busy=false; }
+}
+async function driveLoad(){
+  if(busy) return; busy=true;
+  try{
+    toast("Conectando con Google…",20000);
+    const folder=await ensureFolder(); M.authorized=true; saveMeta();
+    const {data}=await readRemote(folder);
+    if(!data){ toast("Aún no hay datos de la app en tu Drive. Guarda primero desde un dispositivo.",5000); return; }
+    if(data.modifiedAt===S.modifiedAt){ M.lastSync=S.modifiedAt; M.lastSyncRemote=data.modifiedAt; M.lastSyncAt=new Date().toISOString(); saveMeta(); toast("Ya tenías los datos más recientes ✓",3000); render(); return; }
+    if(pendiente()){
+      const choice=await ask("Cambios sin guardar",`Este dispositivo tiene cambios del <b>${fdt(S.modifiedAt)}</b> que no están en Drive. Si cargas los de Drive (del <b>${fdt(data.modifiedAt)}</b>), <b>esos cambios se perderán</b>.`,
+        [{label:"Cancelar",cls:"ghost",value:"no"},{label:"Cargar y perder cambios",cls:"danger",value:"yes"}]);
+      if(choice!=="yes"){ toast("No se ha cargado nada"); return; }
+    }
+    S=data; if(!Array.isArray(S.rutas)) S.rutas=[]; persist(false);
+    M.lastSync=S.modifiedAt; M.lastSyncRemote=S.modifiedAt; M.lastSyncAt=new Date().toISOString(); saveMeta();
+    detailId=null; toast("Datos cargados desde Drive ✓",3000); render();
+  }catch(e){ toast(e.message,5000); }
+  finally{ busy=false; }
+}
+
+/* ================== EVENTOS ================== */
+document.addEventListener("click", async e=>{
+  const t=e.target.closest("[data-open],[data-back],[data-edit],[data-newparcela],[data-newlabor],[data-labor],[data-newanal],[data-anal],[data-year],[data-here],[data-showmap],[data-autogeo],[data-drive],[data-saveclient],[data-export],[data-xlsx],[data-import],[data-goto]");
+  if(!t) return;
+  const d=t.dataset;
+  if(d.open){ e.preventDefault(); tab="parcelas"; detailId=d.open; if(map) map.closePopup(); render(); window.scrollTo(0,0); }
+  else if("back" in d){ detailId=null; render(); }
+  else if(d.edit) formParcela(P(d.edit));
+  else if("newparcela" in d) formParcela(null);
+  else if("newlabor" in d) formLabor(null,d.newlabor);
+  else if(d.labor) formLabor(S.labores.find(l=>l.id===d.labor));
+  else if("newanal" in d) formAnalisis(null,d.newanal);
+  else if(d.anal) formAnalisis(S.analisis.find(a=>a.id===d.anal));
+  else if(d.year){ calYear+= +d.year; render(); }
+  else if(d.here) aquí(d.here);
+  else if(d.showmap){ pickId=d.showmap; tab="mapa"; detailId=null; render(); window.scrollTo(0,0); }
+  else if("autogeo" in d) autoGeo();
+  else if(d.drive==="save") driveSave();
+  else if(d.drive==="load") driveLoad();
+  else if("saveclient" in d){ const v=$("#clientId").value.trim(); if(v && !/\.apps\.googleusercontent\.com$/.test(v)){ toast("Ese ID no parece válido: debe acabar en .apps.googleusercontent.com",4500); return; } M.clientId=v; M.authorized=false; token=null; saveMeta(); render(); toast(v?"ID guardado":"ID borrado"); }
+  else if("export" in d){ download(new Blob([JSON.stringify(S,null,1)],{type:"application/json"}),`mi-olivar-${new Date().toISOString().slice(0,10)}.json`); }
+  else if("xlsx" in d){ try{ download(buildXlsx(),`Mi Olivar - datos ${new Date().toISOString().slice(0,10)}.xlsx`); }catch(err){ toast(err.message,4000); } }
+  else if("import" in d){ $("#importFile").click(); }
+  else if(d.goto){ go(d.goto); }
+});
+$("#importFile").addEventListener("change", async e=>{
+  const f=e.target.files[0]; e.target.value=""; if(!f) return;
+  let data=null; try{ data=JSON.parse(await f.text()); }catch(err){}
+  if(!validData(data)){ toast("Ese archivo no es una copia de Mi Olivar",4000); return; }
+  if(await ask("¿Importar copia?",`Se sustituirán los datos de este dispositivo por los de la copia del <b>${fdt(data.modifiedAt)}</b>.`,[{label:"Importar",cls:"danger",value:true},{label:"Cancelar",cls:"ghost",value:false}])){
+    S=data; if(!Array.isArray(S.rutas)) S.rutas=[]; persist(); render(); toast("Copia importada");
+  }
+});
+document.addEventListener("input", e=>{ if(e.target.id==="q"){ filtro=e.target.value; const pos=e.target.selectionStart; render(); const q=$("#q"); q.focus(); q.setSelectionRange(pos,pos); } });
+document.addEventListener("change", e=>{ const id=e.target.dataset&&e.target.dataset.ruta; if(!id) return; if(e.target.checked){ if(!ruta.includes(id)) ruta.push(id); } else ruta=ruta.filter(x=>x!==id); render(); });
+window.addEventListener("beforeunload", e=>{ /* aviso suave: nada que hacer, los datos ya están en el dispositivo */ });
+
+
+/* rutas: eventos */
+document.addEventListener("input", e=>{ if(e.target.id==="rutaNombre") rutaNombre=e.target.value; });
+document.addEventListener("click", async e=>{
+  const t=e.target.closest("[data-saveruta],[data-delruta],[data-editruta],[data-cancelruta]"); if(!t) return;
+  const d=t.dataset;
+  if("saveruta" in d){
+    if(!ruta.length){ toast("Marca alguna parcela"); return; }
+    const nombre=rutaNombre.trim()||"Ruta sin nombre";
+    if(rutaEdit){ const r=S.rutas.find(x=>x.id===rutaEdit); if(r){ r.nombre=nombre; r.parcelas=[...ruta]; } }
+    else S.rutas.push({id:"r"+uid(), nombre, parcelas:[...ruta], orden:99});
+    persist(); ruta=[]; rutaEdit=null; rutaNombre=""; render(); toast("Ruta guardada");
+  }
+  else if(d.delruta){ const r=S.rutas.find(x=>x.id===d.delruta); if(r && await ask("¿Borrar la ruta?","Se borra “"+esc(r.nombre)+"”. Las parcelas no se tocan.",[{label:"Sí, borrar",cls:"danger",value:true},{label:"Cancelar",cls:"ghost",value:false}])){ S.rutas=S.rutas.filter(x=>x.id!==r.id); persist(); render(); toast("Ruta borrada"); } }
+  else if(d.editruta){ const r=S.rutas.find(x=>x.id===d.editruta); if(!r) return; rutaEdit=r.id; ruta=[...(r.parcelas||[])]; rutaNombre=r.nombre; render(); const b=document.getElementById("builder"); if(b) b.scrollIntoView({behavior:"smooth"}); }
+  else if("cancelruta" in d){ ruta=[]; rutaEdit=null; rutaNombre=""; render(); }
+});
+
+
+/* SIGPAC: el visor no admite enlaces directos a una parcela; copiamos la referencia y lo abrimos */
+function refSigpac(p){ return `Provincia 28 (Madrid) · Municipio 155 (Valdaracete) · Agregado 0 · Zona 0 · Polígono ${p.poligono} · Parcela ${p.parcela}`; }
+document.addEventListener("click", async e=>{
+  const t=e.target.closest("[data-sigpac]"); if(!t) return;
+  const p=P(t.dataset.sigpac); if(!p) return;
+  let copiado=false; try{ await navigator.clipboard.writeText(`28 155 0 0 ${p.poligono} ${p.parcela}`); copiado=true; }catch(err){}
+  openModal(`<h2>Ver en el SIGPAC de la Comunidad de Madrid</h2>
+    <p class="note" style="font-size:14px">El visor no permite abrir una parcela directamente desde otra app. Al abrirlo, busca la parcela por su referencia SIGPAC:</p>
+    <div class="card" style="margin-top:10px;font-size:15px;line-height:1.7">Provincia: <b>28 · Madrid</b><br>Municipio: <b>155 · Valdaracete</b><br>Agregado: <b>0</b> · Zona: <b>0</b><br>Polígono: <b>${p.poligono}</b><br>Parcela: <b>${p.parcela}</b></div>
+    ${copiado?`<p class="note">He copiado la referencia (28 155 0 0 ${p.poligono} ${p.parcela}) por si la quieres pegar.</p>`:""}
+    <div class="btns"><a class="btn" href="${SIGPAC_URL}" target="_blank" rel="noopener">Abrir SIGPAC Comunidad de Madrid</a><button class="btn ghost" data-close>Cerrar</button></div>`);
+});
+
+/* ================== ARRANQUE ================== */
+loadLocal();
+render();
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+if("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>

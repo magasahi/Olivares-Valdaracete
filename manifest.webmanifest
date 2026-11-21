@@ -1,0 +1,16 @@
+{
+  "name": "Mi Olivar · Valdaracete",
+  "short_name": "Mi Olivar",
+  "description": "Cuaderno de explotación del olivar: parcelas, labores, análisis y rutas.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f3ea",
+  "theme_color": "#424d1f",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"},
+    {"src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
