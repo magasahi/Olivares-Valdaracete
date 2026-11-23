@@ -1,5 +1,5 @@
 // Mi Olivar: funciona sin conexión guardando la app en el dispositivo.
-const CACHE = "mi-olivar-v1.0";
+const CACHE = "mi-olivar-v1.1";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js",

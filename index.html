@@ -117,7 +117,7 @@ h2.sec{font-size:18px;margin:4px 0 10px}
 <script>
 "use strict";
 /* ================== CONFIGURACIÓN ================== */
-const APP_VERSION = "1.0";
+const APP_VERSION = "1.1";
 /* Pega aquí tu ID de cliente de Google para no tener que escribirlo en cada dispositivo (opcional). */
 const DEFAULT_CLIENT_ID = "1045049698621-hrb262hoamubjqe0nggsajql1jit22nb.apps.googleusercontent.com";
 const MUNI = "Valdaracete, Madrid";
@@ -447,7 +447,7 @@ function viewDatos(){
     <p class="note">Se configura una sola vez en cada dispositivo. Sigue la guía de instalación.</p>
   </div>
   <div class="card"><h3>Copia en archivo (sin Drive)</h3>
-    <div class="btns"><button class="btn ghost" data-export>Descargar copia (.json)</button><button class="btn ghost" data-xlsx>Descargar Excel</button><button class="btn ghost" data-import>Importar copia</button></div>
+    <div class="btns"><button class="btn ghost" data-export>Descargar copia (.json)</button><button class="btn ghost" data-xlsx>Descargar Excel</button><button class="btn ghost" data-import>Importar copia o parcelas</button></div>
   </div>
   <p class="note" style="text-align:center">Mi Olivar v${APP_VERSION} · los datos se guardan en este dispositivo y en tu Drive; nadie más tiene acceso.</p>`;
 }
@@ -754,9 +754,29 @@ document.addEventListener("click", async e=>{
   else if("import" in d){ $("#importFile").click(); }
   else if(d.goto){ go(d.goto); }
 });
+
+/* Paquete de parcelas nuevas: se AÑADEN a tus datos sin borrar nada */
+async function importarPaquete(pk){
+  const nuevas=(pk.parcelas||[]); if(!nuevas.length){ toast("El paquete no trae parcelas"); return; }
+  const lista=nuevas.map(n=>`<li>${esc(nom(n))}</li>`).join("");
+  if(!await ask("¿Añadir parcelas?",`Se añadirán a tus datos (no se borra nada):<ul style="margin:6px 0 0 18px;padding:0">${lista}</ul>`,[{label:"Añadir",value:true},{label:"Cancelar",cls:"ghost",value:false}])) return;
+  const mapa={}; let add=0, act=0;
+  for(const n of nuevas){
+    const ya=S.parcelas.find(p=>(n.rc&&p.rc===n.rc) || (p.poligono===n.poligono&&p.parcela===n.parcela));
+    if(ya){ const keep={id:ya.id, olivosContados:ya.olivosContados??n.olivosContados, variedad:ya.variedad||n.variedad, estado:ya.estado||n.estado, acceso:ya.acceso||n.acceso, notas:ya.notas||n.notas, entrada:ya.entrada||n.entrada||null};
+      Object.assign(ya,n,keep); mapa[n.id]=ya.id; act++; }
+    else { let id=n.id; if(S.parcelas.some(p=>p.id===id)) id="p"+uid(); S.parcelas.push({...n,id, orden:S.parcelas.length+1}); mapa[n.id]=id; add++; }
+  }
+  for(const [rid,ids] of Object.entries(pk.rutasAdd||{})){
+    const r=(S.rutas||[]).find(x=>x.id===rid); if(!r) continue;
+    ids.map(i=>mapa[i]||i).forEach(i=>{ if(!r.parcelas.includes(i)) r.parcelas.push(i); });
+  }
+  persist(); render(); toast(`${add?add+" parcela(s) añadida(s)":""}${add&&act?" · ":""}${act?act+" actualizada(s)":""}. Recuerda “Guardar en Drive”.`,4500);
+}
 $("#importFile").addEventListener("change", async e=>{
   const f=e.target.files[0]; e.target.value=""; if(!f) return;
   let data=null; try{ data=JSON.parse(await f.text()); }catch(err){}
+  if(data && data.app==="mi-olivar-paquete"){ await importarPaquete(data); return; }
   if(!validData(data)){ toast("Ese archivo no es una copia de Mi Olivar",4000); return; }
   if(await ask("¿Importar copia?",`Se sustituirán los datos de este dispositivo por los de la copia del <b>${fdt(data.modifiedAt)}</b>.`,[{label:"Importar",cls:"danger",value:true},{label:"Cancelar",cls:"ghost",value:false}])){
     S=data; if(!Array.isArray(S.rutas)) S.rutas=[]; persist(); render(); toast("Copia importada");
